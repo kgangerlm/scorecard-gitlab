@@ -50,7 +50,7 @@ func (handler *releasesHandler) setup() error {
 			return
 		}
 		if len(releases) > 0 {
-			handler.releases = releasesFrom(releases)
+			handler.releases = handler.releasesFrom(releases)
 		} else {
 			handler.releases = nil
 		}
@@ -65,13 +65,13 @@ func (handler *releasesHandler) getReleases() ([]clients.Release, error) {
 	return handler.releases, nil
 }
 
-func releasesFrom(data []*gitlab.Release) []clients.Release {
+func (handler *releasesHandler) releasesFrom(data []*gitlab.Release) []clients.Release {
 	var releases []clients.Release
 	for _, r := range data {
 		release := clients.Release{
 			TagName:         r.TagName,
-			URL:             r.Assets.Links[0].DirectAssetURL,
-			TargetCommitish: r.CommitPath,
+			URL:             r.Links.Self,
+			TargetCommitish: handler.commitToBranch(&r.Commit.ID),
 		}
 		for _, a := range r.Assets.Sources {
 			release.Assets = append(release.Assets, clients.ReleaseAsset{
@@ -82,4 +82,17 @@ func releasesFrom(data []*gitlab.Release) []clients.Release {
 		releases = append(releases, release)
 	}
 	return releases
+}
+
+func (handler *releasesHandler) commitToBranch(commitId *string) string {
+	commit, _, err := handler.glClient.Commits.GetCommit(handler.repourl.project, *commitId)
+	if err != nil {
+		handler.errSetup = fmt.Errorf("%w: Failed to get the commit for a release", err)
+		return ""
+	}
+	if commit.LastPipeline != nil {
+		return commit.LastPipeline.Ref
+	} else {
+		return ""
+	}
 }
