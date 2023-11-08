@@ -1,14 +1,14 @@
 # OpenSSF Scorecard
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ossf/scorecard/badge)](https://securityscorecards.dev/viewer/?uri=github.com/ossf/scorecard)
-[![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/5621/badge)](https://bestpractices.coreinfrastructure.org/projects/5621)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/5621/badge)](https://www.bestpractices.dev/projects/5621)
 ![build](https://github.com/ossf/scorecard/workflows/build/badge.svg?branch=main)
 ![CodeQL](https://github.com/ossf/scorecard/workflows/CodeQL/badge.svg?branch=main)
 [![Go Reference](https://pkg.go.dev/badge/github.com/ossf/scorecard/v4.svg)](https://pkg.go.dev/github.com/ossf/scorecard/v4)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ossf/scorecard/v4)](https://goreportcard.com/report/github.com/ossf/scorecard/v4)
 [![codecov](https://codecov.io/gh/ossf/scorecard/branch/main/graph/badge.svg?token=PMJ6NAN9J3)](https://codecov.io/gh/ossf/scorecard)
-[![Slack](https://slack.babeljs.io/badge.svg)](https://slack.openssf.org/#security_scorecards)
 [![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
+[![Slack](https://img.shields.io/badge/slack-openssf/security_scorecards-white.svg?logo=slack)](https://slack.openssf.org/#security_scorecards)
 
 <img align="right" src="artwork/openssf_security_compressed.png" width="200" height="400">
 
@@ -16,6 +16,7 @@
 
 -   [What Is Scorecard?](#what-is-scorecard)
 -   [Prominent Scorecard Users](#prominent-scorecard-users)
+-   [View a Project's Score](#view-a-projects-score)
 -   [Scorecard's Public Data](#public-data)
 
 ## Using Scorecard
@@ -91,6 +92,17 @@ metrics. Prominent projects that use Scorecard include:
 -   [sos.dev](https://sos.dev)
 -   [deps.dev](https://deps.dev)
 
+### View a Project's Score
+
+To see scores for projects regularly scanned by Scorecard, navigate to the webviewer, replacing the placeholder text with the platform, user/org, and repository name: 
+https://securityscorecards.dev/viewer/?uri=<github_or_gitlab>.com/<user_name_or_org>/<repository_name>.
+
+For example: 
+ - [https://securityscorecards.dev/viewer/?uri=github.com/ossf/scorecard](https://securityscorecards.dev/viewer/?uri=github.com/ossf/scorecard)
+ - [https://securityscorecards.dev/viewer/?uri=gitlab.com/fdroid/fdroidclient](https://securityscorecards.dev/viewer/?uri=gitlab.com/fdroid/fdroidclient)
+
+To view scores for projects not included in the webviewer, use the [Scorecard CLI](#scorecard-command-line-interface). 
+
 ### Public Data
 
 We run a weekly Scorecard scan of the 1 million most critical open source
@@ -149,6 +161,8 @@ To query pre-calculated scores of OSS projects, use the [REST API](https://api.s
 To enable your project to be available on the REST API, set
 [`publish_results: true`](https://github.com/ossf/scorecard-action/blob/dd5015aaf9688596b0e6d11e7f24fff566aa366b/action.yaml#L35)
 in the Scorecard GitHub Action setting.
+
+Data provided by the REST API is licensed under the [CDLA Permissive 2.0](https://cdla.dev/permissive-2-0).
 
 ### Scorecard Badges
 
@@ -404,6 +418,24 @@ RESULTS
 |---------|------------------------|--------------------------------|--------------------------------|---------------------------------------------------------------------------|
 ```
 
+##### Using a GitLab Repository
+
+To run Scorecard on a GitLab repository, you must create a [GitLab Access Token](https://gitlab.com/-/profile/personal_access_tokens) with the following permissions:
+
+- `read_api`
+- `read_user`
+- `read_repository`
+
+You can run Scorecard on a GitLab repository by setting the `GITLAB_AUTH_TOKEN` environment variable:
+
+```bash
+export GITLAB_AUTH_TOKEN=glpat-xxxx
+
+scorecard --repo gitlab.com/<org>/<project>/<subproject>
+```
+
+For an example of using Scorecard in GitLab CI/CD, see [here](https://gitlab.com/ossf-test/scorecard-pipeline-example).
+
 ##### Using GitHub Enterprise Server (GHES) based Repository
 
 To use a GitHub Enterprise host `github.corp.com`, use the `GH_HOST` environment variable.
@@ -452,7 +484,7 @@ Name        | Description                               | Risk Level | Token Req
 [Binary-Artifacts](docs/checks.md#binary-artifacts)             | Is the project free of checked-in binaries?     | High               | PAT, GITHUB_TOKEN   | Supported |
 [Branch-Protection](docs/checks.md#branch-protection)           | Does the project use [Branch Protection](https://docs.github.com/en/free-pro-team@latest/github/administering-a-repository/about-protected-branches) ?                                                                                                                                                                       | High | PAT (`repo` or `repo> public_repo`), GITHUB_TOKEN    | Supported (see notes) | certain settings are only supported with a maintainer PAT
 [CI-Tests](docs/checks.md#ci-tests)                             | Does the project run tests in CI, e.g. [GitHub Actions](https://docs.github.com/en/free-pro-team@latest/actions), [Prow](https://github.com/kubernetes/test-infra/tree/master/prow)?                                                                                                                                         | Low | PAT, GITHUB_TOKEN   | Supported
-[CII-Best-Practices](docs/checks.md#cii-best-practices)         | Has the project earned an [OpenSSF (formerly CII) Best Practices Badge](https://bestpractices.coreinfrastructure.org) at the passing, silver, or gold level?                                                                                                                                                                 | Low  | PAT, GITHUB_TOKEN   | Validating |
+[CII-Best-Practices](docs/checks.md#cii-best-practices)         | Has the project earned an [OpenSSF (formerly CII) Best Practices Badge](https://www.bestpractices.dev) at the passing, silver, or gold level?                                                                                                                                                                 | Low  | PAT, GITHUB_TOKEN   | Validating |
 [Code-Review](docs/checks.md#code-review)                       | Does the project practice code review before code is merged?                                                                                                                                                                                                                                                                 | High | PAT, GITHUB_TOKEN   | Validating |
 [Contributors](docs/checks.md#contributors)                     | Does the project have contributors from at least two different organizations?                                                                                                                                                                                                                                                | Low | PAT, GITHUB_TOKEN   | Validating |
 [Dangerous-Workflow](docs/checks.md#dangerous-workflow)         | Does the project avoid dangerous coding patterns in GitHub Action workflows?                                                                                                                                                                                                                                                 | Critical | PAT, GITHUB_TOKEN   | Unsupported |
@@ -467,7 +499,7 @@ Name        | Description                               | Risk Level | Token Req
 [Signed-Releases](docs/checks.md#signed-releases)               | Does the project cryptographically [sign releases](https://wiki.debian.org/Creating%20signed%20GitHub%20releases)?                                                                                                                                                                                                           | High | PAT, GITHUB_TOKEN   | Validating |
 [Token-Permissions](docs/checks.md#token-permissions)           | Does the project declare GitHub workflow tokens as [read only](https://docs.github.com/en/actions/reference/authentication-in-a-workflow)?                                                                                                                                                                                   | High | PAT, GITHUB_TOKEN   | Unsupported |
 [Vulnerabilities](docs/checks.md#vulnerabilities)               | Does the project have unfixed vulnerabilities? Uses the [OSV service](https://osv.dev).                                                                                                                                                                                                                                      | High | PAT, GITHUB_TOKEN   | Validating |
-[Webhooks](docs/checks.md#webhooks)                             | Does the webhook defined in the repository have a token configured to authenticate the origins of requests?                                                                                                                                                                                                                                      | High | maintainer PAT (`admin: repo_hook` or `admin> read:repo_hook` [doc](https://docs.github.com/en/rest/webhooks/repo-config#get-a-webhook-configuration-for-a-repository)  |  | EXPERIMENTAL
+[Webhooks](docs/checks.md#webhooks)                             | Does the webhook defined in the repository have a token configured to authenticate the origins of requests?                                                                                                                                                                                                                                      | Critical | maintainer PAT (`admin: repo_hook` or `admin> read:repo_hook` [doc](https://docs.github.com/en/rest/webhooks/repo-config#get-a-webhook-configuration-for-a-repository)  |  | EXPERIMENTAL
 
 ### Detailed Checks Documentation
 
