@@ -17,14 +17,15 @@ package raw
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"net/url"
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/slices"
 	"mvdan.cc/sh/v3/syntax"
 
 	"github.com/ossf/scorecard/v4/checker"
@@ -1055,9 +1056,22 @@ func validateShellFileAndRecord(pathfn string, startLine, endLine uint, content 
 	in := strings.NewReader(string(content))
 	f, err := syntax.NewParser().Parse(in, pathfn)
 	if err != nil {
-		// Note: this is caught by internal caller and only printed
-		// to avoid failing on shell scripts that our parser does not understand.
-		// Example: https://github.com/openssl/openssl/blob/master/util/shlib_wrap.sh.in
+		// If we cannot parse the file, register that we are skipping it
+		var parseError syntax.ParseError
+		if errors.As(err, &parseError) {
+			content := string(content)
+			r.ProcessingErrors = append(r.ProcessingErrors, checker.ElementError{
+				Err: sce.WithMessage(sce.ErrorShellParsing, parseError.Text),
+				Location: finding.Location{
+					Path:      pathfn,
+					LineStart: &startLine,
+					LineEnd:   &endLine,
+					Snippet:   &content,
+					Type:      finding.FileTypeSource,
+				},
+			})
+			return nil
+		}
 		return sce.WithMessage(sce.ErrorShellParsing, err.Error())
 	}
 
