@@ -27,16 +27,24 @@ create a new GitHub Issue to discuss with the team:
 
 ## Check Brainstorm
 
-## SBOM Check description
+### SBOM Check description
 
-- General: Establish framework to check for sbom related items, beginning with existence of published sbom in any form, leveraging the exiting and emerging standards for locations and naming. Also with the ability to add additional functionality later as sboms become more adopted.
+- Description: Establish framework to check for and assign points for sbom related items, beginning with existence of published sbom in any form, leveraging the existing and emerging standards for locations and naming. Also with the ability to add additional functionality later as sboms become more adopted.
 - Probes:
   - Check for published SBOM (MVP)
   - Verify SBOM format (spdx, cyclonedx) (MVP?)
   - Check for SBOM quality (leveraging sbom-scorecard) (#2605)
+- Initial Point Assignment: (Purposed)
+  - Published Sbom exists: 7 points
+  - Valid Sbom Format: 3 points
 
-## Probe Breakdown - Check for published SBOM
+### Probe Breakdown - Check for published SBOM
 
+- Description: Check locations/files set down in associated standards for an sbom for the project. 
+- Challenges:
+  - 
+- Considerations:
+  -
 - Standards to leverage:
   - security insights 1.0.0 spec:
     - <https://github.com/ossf/security-insights-spec/blob/v1.0.0/specification.md#dependencies>
@@ -46,15 +54,23 @@ create a new GitHub Issue to discuss with the team:
   - Gitlab/hub release artifacts
   - pipeline/workflow artifacts
   - security insights 1.0.0 spec:
-    - Location specified in SECURITY_INSßIGHTS.yml (dependency#sbom section)
+    - Location specified in SECURITY_INSIGHTS.yml (dependencies#sbom section)
   - sbom-everywhere naming and directory conventions:
 
-    | Standard + Format | Artifact Filename | SBOM Filename |
-    |:------------------|:------------------|:--------------|
-    | CycloneDX JSON | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.cdx.json |
-    | CycloneDX XML | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.cdx.xml |
-    | SPDX TAG:VALUE | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx |
-    | SPDX JSON | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.json |
-    | SPDX XML | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.xml |
-    | SPDX YAML | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.yml (or .yaml) |
-    | SPDX RDF XML | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.rdf (or .rdf.xml) |
+    | Standard + Format | Artifact Filename     | SBOM Filename |
+    |:------------------|:----------------------|:--------------|
+    | CycloneDX JSON    | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.cdx.json |
+    | CycloneDX XML     | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.cdx.xml |
+    | SPDX TAG:VALUE    | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx |
+    | SPDX JSON         | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.json |
+    | SPDX XML          | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.xml |
+    | SPDX YAML         | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.yml (or .yaml) |
+    | SPDX RDF XML      | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.rdf (or .rdf.xml) |
+
+### Probe Breakdown - Validate Sbom Format 
+
+- Description: If sbom found in previous probe, validate its contents based off industry standard sbom schemas (CycloneDX/Spdx)
+- Challenges: 
+  - Determine which validation tool to use or create mechanism for validating against a given schema
+- Considerations:
+  - 
