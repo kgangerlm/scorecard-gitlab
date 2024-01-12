@@ -37,14 +37,24 @@ create a new GitHub Issue to discuss with the team:
   - Determine method for checking if project type should have an SBOM? (Arbitrary, but Maintainers Annotation may provide means for maintainers to make their project exempt from this check)
 - Probes:
   - Check for published SBOM (MVP)
+  - Check for source Sbom (top level)
   - Validate SBOM format (spdx, cyclonedx) (MVP?) (sbom-scorecard handles this, We should let #2605 handle this portion)
   - Check for SBOM quality (leveraging sbom-scorecard) (#2605)
 - Initial Point Assignment: (Purposed)
-  - Published Sbom exists: 10 points
+  - Published Sbom exists in release artifacts: 7 points
+  - sbom exists in repo (source or artifacts): 3 points
 - Future Point Assignment:
   - Published Sbom exists: 3 points
-  - Valid Format: 3 Points
-  - "high quality" sbom-scorecard result (result percentage * 4)
+  - sbom exists in repo (source or artifacts): 3 points
+  - sbom-scorecard "quality" result (result percentage * 4)
+
+#### Development Notes
+
+Top-Level sbom Check Tests:
+
+- no sbom (no points)
+- published sbom (full points) (Not exactly sure how to test this)
+- source sbom (partial points)
 
 ### Probe Breakdown - Check for published SBOM
 
@@ -55,6 +65,7 @@ create a new GitHub Issue to discuss with the team:
 - Considerations:
   - In what order should the locations be checked? Does it matter?
   - Check for SLSA Provenances in release pipeline
+  - Should a certain # of releases be checked in order to be awarded points?
 - Standards to leverage:
   - security insights 1.0.0 spec:
     - <https://github.com/ossf/security-insights-spec/blob/v1.0.0/specification.md#dependencies>
@@ -63,9 +74,33 @@ create a new GitHub Issue to discuss with the team:
 - places to check:
   - Git(lab/hub) release artifacts
   - pipeline/workflow artifacts
-  - security insights 1.0.0 spec:
-    - Location specified in SECURITY_INSIGHTS.yml (dependencies#sbom section)
   - sbom-everywhere naming and directory conventions:
+
+    | Standard  | Format    | Artifact Filename     | SBOM Filename |
+    |:----------|:----------|:----------------------|:--------------|
+    | CycloneDX | JSON      | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.cdx.json |
+    | CycloneDX | XML       | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.cdx.xml |
+    | SPDX      | TAG:VALUE | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx |
+    | SPDX      | JSON      | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.json |
+    | SPDX      | XML       | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.xml |
+    | SPDX      | YAML      | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.yml (or .yaml) |
+    | SPDX      | RDF XML   | artifact-1.0.0.tar.gz | artifact-1.0.0.tar.gz.spdx.rdf (or .rdf.xml) |
+
+### Probe Breakdown - Check for Source Sbom
+
+- Challenges:
+  - Need to determine artifact/job name to determine potential sbom name
+- Standards to leverage:
+  - security insights 1.0.0 spec:
+    - <https://github.com/ossf/security-insights-spec/blob/v1.0.0/specification.md#dependencies>
+  - sbom-everywhere naming and directory conventions:
+    - <https://github.com/ossf/sbom-everywhere/blob/main/reference/sbom_naming.md>
+- places to check:
+  - root of repo directory
+  - boms/sboms (hidden folders? .bom/.sbom)
+    - security insights 1.0.0 spec:
+      - Location specified in SECURITY_INSIGHTS.yml (dependencies#sbom section)
+    - sbom-everywhere naming and directory conventions:
 
     | Standard  | Format    | Artifact Filename     | SBOM Filename |
     |:----------|:----------|:----------------------|:--------------|
