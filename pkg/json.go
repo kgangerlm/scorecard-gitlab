@@ -27,7 +27,6 @@ import (
 	"github.com/ossf/scorecard/v4/log"
 )
 
-//nolint:govet
 type jsonCheckResult struct {
 	Name       string
 	Details    []string
@@ -49,7 +48,7 @@ type jsonCheckDocumentationV2 struct {
 	// Can be extended if needed.
 }
 
-// nolint: govet
+//nolint:govet
 type jsonCheckResultV2 struct {
 	Details []string                 `json:"details"`
 	Score   int                      `json:"score"`
@@ -69,6 +68,8 @@ type jsonScorecardV2 struct {
 }
 
 type jsonFloatScore float64
+
+var errNoDoc = errors.New("doc is nil")
 
 func (s jsonFloatScore) MarshalJSON() ([]byte, error) {
 	// Note: for integers, this will show as X.0.
@@ -147,6 +148,9 @@ func (r *ScorecardResult) AsJSON2(showDetails bool,
 		doc, e := checkDocs.GetCheck(checkResult.Name)
 		if e != nil {
 			return sce.WithMessage(sce.ErrScorecardInternal, fmt.Sprintf("GetCheck: %s: %v", checkResult.Name, e))
+		}
+		if doc == nil {
+			return sce.WithMessage(sce.ErrScorecardInternal, fmt.Sprintf("GetCheck: %s: %v", checkResult.Name, errNoDoc))
 		}
 
 		tmpResult := jsonCheckResultV2{

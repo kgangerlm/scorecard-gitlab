@@ -17,6 +17,7 @@ package raw
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -111,6 +112,21 @@ func collectDockerfileInsecureDownloads(c *checker.CheckRequest, r *checker.Pinn
 	}, validateDockerfileInsecureDownloads, r)
 }
 
+func fileIsInVendorDir(pathfn string) bool {
+	cleanedPath := filepath.Clean(pathfn)
+	splitCleanedPath := strings.Split(cleanedPath, "/")
+
+	for _, d := range splitCleanedPath {
+		if strings.EqualFold(d, "vendor") {
+			return true
+		}
+		if strings.EqualFold(d, "third_party") {
+			return true
+		}
+	}
+	return false
+}
+
 var validateDockerfileInsecureDownloads fileparser.DoWhileTrueOnFileContent = func(
 	pathfn string,
 	content []byte,
@@ -120,6 +136,10 @@ var validateDockerfileInsecureDownloads fileparser.DoWhileTrueOnFileContent = fu
 		return false, fmt.Errorf(
 			"validateDockerfileInsecureDownloads requires exactly 1 arguments: got %v: %w",
 			len(args), errInvalidArgLength)
+	}
+
+	if fileIsInVendorDir(pathfn) {
+		return true, nil
 	}
 
 	pdata := dataAsPinnedDependenciesPointer(args[0])
@@ -142,7 +162,6 @@ var validateDockerfileInsecureDownloads fileparser.DoWhileTrueOnFileContent = fu
 	// Walk the Dockerfile's AST.
 	taintedFiles := make(map[string]bool)
 	for i := range res.AST.Children {
-		var bytes []byte
 
 		child := res.AST.Children[i]
 		cmdType := child.Value
@@ -152,21 +171,33 @@ var validateDockerfileInsecureDownloads fileparser.DoWhileTrueOnFileContent = fu
 			continue
 		}
 
-		var valueList []string
-		for n := child.Next; n != nil; n = n.Next {
-			valueList = append(valueList, n.Value)
-		}
+		if len(child.Heredocs) > 0 {
+			startOffset := 1
+			for _, heredoc := range child.Heredocs {
+				cmd := heredoc.Content
+				lineCount := startOffset + strings.Count(cmd, "\n")
+				if err := validateShellFile(pathfn, uint(child.StartLine+startOffset)-1, uint(child.StartLine+lineCount)-2,
+					[]byte(cmd), taintedFiles, pdata); err != nil {
+					return false, err
+				}
+				startOffset += lineCount
+			}
+		} else {
+			var valueList []string
+			for n := child.Next; n != nil; n = n.Next {
+				valueList = append(valueList, n.Value)
+			}
 
-		if len(valueList) == 0 {
-			return false, sce.WithMessage(sce.ErrScorecardInternal, errInternalInvalidDockerFile.Error())
-		}
+			if len(valueList) == 0 {
+				return false, sce.WithMessage(sce.ErrScorecardInternal, errInternalInvalidDockerFile.Error())
+			}
 
-		// Build a file content.
-		cmd := strings.Join(valueList, " ")
-		bytes = append(bytes, cmd...)
-		if err := validateShellFile(pathfn, uint(child.StartLine)-1, uint(child.EndLine)-1,
-			bytes, taintedFiles, pdata); err != nil {
-			return false, err
+			// Build a file content.
+			cmd := strings.Join(valueList, " ")
+			if err := validateShellFile(pathfn, uint(child.StartLine)-1, uint(child.EndLine)-1,
+				[]byte(cmd), taintedFiles, pdata); err != nil {
+				return false, err
+			}
 		}
 	}
 
@@ -219,6 +250,11 @@ var validateDockerfilesPinning fileparser.DoWhileTrueOnFileContent = func(
 		return false, fmt.Errorf(
 			"validateDockerfilesPinning requires exactly 2 arguments: got %v: %w", len(args), errInvalidArgLength)
 	}
+
+	if fileIsInVendorDir(pathfn) {
+		return true, nil
+	}
+
 	pdata := dataAsPinnedDependenciesPointer(args[0])
 
 	// Return early if this is not a dockerfile.
@@ -323,7 +359,7 @@ var validateDockerfilesPinning fileparser.DoWhileTrueOnFileContent = func(
 		}
 	}
 
-	//nolint
+	//nolint:lll
 	// The file need not have a FROM statement,
 	// https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/dockerfiles/partials/jupyter.partial.Dockerfile.
 

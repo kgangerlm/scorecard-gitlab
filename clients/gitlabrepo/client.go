@@ -114,7 +114,7 @@ func (client *Client) InitRepo(inputRepo clients.Repo, commitSHA string, commitD
 	client.contributors.init(client.repourl)
 
 	// Init commitsHandler
-	client.commits.init(client.repourl)
+	client.commits.init(client.repourl, client.commitDepth)
 
 	// Init branchesHandler
 	client.branches.init(client.repourl)
@@ -184,6 +184,10 @@ func (client *Client) ListCommits() ([]clients.Commit, error) {
 		return []clients.Commit{}, err
 	}
 
+	if len(commitsRaw) < 1 {
+		return []clients.Commit{}, nil
+	}
+
 	now := time.Now().AddDate(-5, 0, 0)
 	before := &now
 	for _, i := range commitsRaw {
@@ -192,6 +196,7 @@ func (client *Client) ListCommits() ([]clients.Commit, error) {
 			before = &t
 		}
 	}
+
 	// Get merge request details from GraphQL
 	// GitLab REST API doesn't provide a way to link Merge Requests and Commits that
 	// are within them without making a REST call for each commit (~30 by default)

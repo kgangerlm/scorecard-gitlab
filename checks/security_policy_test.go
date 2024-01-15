@@ -28,13 +28,12 @@ import (
 
 func TestSecurityPolicy(t *testing.T) {
 	t.Parallel()
-	//nolint
 	tests := []struct {
 		name    string
 		path    string
 		files   []string
-		wantErr bool
 		want    scut.TestReturn
+		wantErr bool
 	}{
 		{
 			name: "security.md",

@@ -15,7 +15,6 @@
 package git
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -27,6 +26,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/ossf/scorecard/v4/clients"
+	"github.com/ossf/scorecard/v4/clients/localdir"
 )
 
 func createTestRepo(t *testing.T) (path string) {
@@ -36,7 +36,7 @@ func createTestRepo(t *testing.T) (path string) {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
 	t.Cleanup(func() {
-		os.RemoveAll(dir) // nolint:errcheck
+		os.RemoveAll(dir)
 	})
 	r, err := gitV5.PlainInit(dir, false)
 	if err != nil {
@@ -50,7 +50,7 @@ func createTestRepo(t *testing.T) (path string) {
 
 	// Create a new file
 	filePath := filepath.Join(dir, "file")
-	err = os.WriteFile(filePath, []byte("Hello, World!"), 0o644) //nolint:gosec
+	err = os.WriteFile(filePath, []byte("Hello, World!"), 0o600)
 	if err != nil {
 		t.Fatalf("Failed to write a file: %v", err)
 	}
@@ -77,31 +77,21 @@ func createTestRepo(t *testing.T) (path string) {
 	return dir
 }
 
-//nolint:paralleltest
 func TestInitRepo(t *testing.T) {
-	tests := []struct { //nolint:govet
+	t.Parallel()
+	tests := []struct {
 		name        string
-		uri         string
 		commitSHA   string
-		commitDepth int
 		expectedErr string
+		commitDepth int
 	}{
 		{
 			name:        "Success",
-			uri:         "file://%s",
 			commitSHA:   "HEAD",
 			commitDepth: 1,
 		},
 		{
-			name:        "InvalidUri",
-			uri:         ":",
-			commitSHA:   "",
-			commitDepth: 1,
-			expectedErr: "repository does not exist",
-		},
-		{
 			name:        "NegativeCommitDepth",
-			uri:         "file://%s",
 			commitSHA:   "HEAD",
 			commitDepth: -1,
 		},
@@ -112,10 +102,15 @@ func TestInitRepo(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			uri := fmt.Sprintf(test.uri, repoPath)
+			t.Parallel()
+			uri := repoPath
 
 			client := &Client{}
-			err := client.InitRepo(uri, test.commitSHA, test.commitDepth)
+			repo, err := localdir.MakeLocalDirRepo(uri)
+			if err != nil {
+				t.Fatalf("MakeLocalDirRepo(%s) failed: %v", uri, err)
+			}
+			err = client.InitRepo(repo, test.commitSHA, test.commitDepth)
 			if (test.expectedErr != "") != (err != nil) {
 				t.Errorf("Unexpected error during InitRepo: %v", err)
 			}
@@ -124,14 +119,19 @@ func TestInitRepo(t *testing.T) {
 }
 
 func TestListCommits(t *testing.T) {
+	t.Parallel()
 	repoPath := createTestRepo(t)
 
 	client := &Client{}
 	commitDepth := 1
 	expectedLen := 1
 	commitSHA := "HEAD"
-	uri := fmt.Sprintf("file://%s", repoPath)
-	if err := client.InitRepo(uri, commitSHA, commitDepth); err != nil {
+	uri := repoPath
+	repo, err := localdir.MakeLocalDirRepo(uri)
+	if err != nil {
+		t.Fatalf("MakeLocalDirRepo(%s) failed: %v", uri, err)
+	}
+	if err := client.InitRepo(repo, commitSHA, commitDepth); err != nil {
 		t.Fatalf("InitRepo(%s) failed: %v", uri, err)
 	}
 
@@ -147,8 +147,8 @@ func TestListCommits(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest
 func TestSearch(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		request  clients.SearchRequest
@@ -185,7 +185,7 @@ func TestSearch(t *testing.T) {
 	// Use the same test repo for all test cases.
 	repoPath := createTestRepo(t)
 	filePath := filepath.Join(repoPath, "test.txt")
-	err := os.WriteFile(filePath, []byte("Hello, World!"), 0o644) //nolint:gosec
+	err := os.WriteFile(filePath, []byte("Hello, World!"), 0o600)
 	if err != nil {
 		t.Fatalf("WriteFile() failed: %v", err)
 	}
@@ -215,10 +215,16 @@ func TestSearch(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			client := &Client{}
-			uri := fmt.Sprintf("file://%s", repoPath)
-			if err := client.InitRepo(uri, "HEAD", 1); err != nil {
+			uri := repoPath
+			repo, err := localdir.MakeLocalDirRepo(uri)
+			if err != nil {
+				t.Fatalf("MakeLocalDirRepo(%s) failed: %v", uri, err)
+			}
+			if err := client.InitRepo(repo, "HEAD", 1); err != nil {
 				t.Fatalf("InitRepo(%s) failed: %v", uri, err)
 			}
 

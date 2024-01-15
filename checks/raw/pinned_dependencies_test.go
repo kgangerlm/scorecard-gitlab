@@ -34,7 +34,7 @@ import (
 func TestGithubWorkflowPinning(t *testing.T) {
 	t.Parallel()
 
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		warns    int
 		err      error
@@ -159,14 +159,12 @@ func TestGithubWorkflowPinningPattern(t *testing.T) {
 			ispinned: true,
 		},
 		{
-			desc: "non-github docker image pinned by digest",
-			//nolint:lll
+			desc:     "non-github docker image pinned by digest",
 			uses:     "docker://gcr.io/distroless/static-debian11@sha256:9e6f8952f12974d088f648ed6252ea1887cdd8641719c8acd36bf6d2537e71c0",
 			ispinned: true,
 		},
 		{
-			desc: "non-github docker image pinned to mutable tag",
-			//nolint:lll
+			desc:     "non-github docker image pinned to mutable tag",
 			uses:     "docker://gcr.io/distroless/static-debian11:sha256-3876708467ad6f38f263774aa107d331e8de6558a2874aa223b96fc0d9dfc820.sig",
 			ispinned: false,
 		},
@@ -196,7 +194,7 @@ func TestGithubWorkflowPinningPattern(t *testing.T) {
 func TestNonGithubWorkflowPinning(t *testing.T) {
 	t.Parallel()
 
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		warns    int
 		err      error
@@ -271,7 +269,7 @@ func TestNonGithubWorkflowPinning(t *testing.T) {
 func TestGithubWorkflowPkgManagerPinning(t *testing.T) {
 	t.Parallel()
 
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		unpinned         int
 		processingErrors int
@@ -331,7 +329,7 @@ func TestGithubWorkflowPkgManagerPinning(t *testing.T) {
 func TestDockerfilePinning(t *testing.T) {
 	t.Parallel()
 
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		warns    int
 		err      error
@@ -340,41 +338,46 @@ func TestDockerfilePinning(t *testing.T) {
 	}{
 		{
 			name:     "invalid dockerfile",
-			filename: "./testdata/Dockerfile-invalid",
+			filename: "Dockerfile-invalid",
 		},
 		{
 			name:     "invalid dockerfile sh",
-			filename: "../testdata/script-sh",
+			filename: "../../testdata/script-sh",
 		},
 		{
 			name:     "empty file",
-			filename: "./testdata/Dockerfile-empty",
+			filename: "Dockerfile-empty",
 		},
 		{
 			name:     "comments only",
-			filename: "./testdata/Dockerfile-comments",
+			filename: "Dockerfile-comments",
 		},
 		{
 			name:     "Pinned dockerfile",
-			filename: "./testdata/Dockerfile-pinned",
+			filename: "Dockerfile-pinned",
 		},
 		{
 			name:     "Pinned dockerfile as",
-			filename: "./testdata/Dockerfile-pinned-as",
+			filename: "Dockerfile-pinned-as",
 		},
 		{
 			name:     "Non-pinned dockerfile as",
-			filename: "./testdata/Dockerfile-not-pinned-as",
+			filename: "Dockerfile-not-pinned-as",
 			warns:    2,
 		},
 		{
+			name:     "Non-pinned dockerfile but in vendor, ie: 0 warns",
+			filename: "vendor/Dockerfile-not-pinned-as",
+			warns:    0,
+		},
+		{
 			name:     "Non-pinned dockerfile",
-			filename: "./testdata/Dockerfile-not-pinned",
+			filename: "Dockerfile-not-pinned",
 			warns:    1,
 		},
 		{
 			name:     "Parser error doesn't affect docker image pinning",
-			filename: "./testdata/Dockerfile-not-pinned-with-parser-error",
+			filename: "Dockerfile-not-pinned-with-parser-error",
 			warns:    1,
 		},
 	}
@@ -387,14 +390,14 @@ func TestDockerfilePinning(t *testing.T) {
 			if tt.filename == "" {
 				content = make([]byte, 0)
 			} else {
-				content, err = os.ReadFile(tt.filename)
+				content, err = os.ReadFile(filepath.Join("testdata", tt.filename))
 				if err != nil {
 					t.Errorf("cannot read file: %v", err)
 				}
 			}
 
 			var r checker.PinningDependenciesData
-			_, err = validateDockerfilesPinning(tt.filename, content, &r)
+			_, err = validateDockerfilesPinning(filepath.Join("testdata", tt.filename), content, &r)
 			if !errCmp(err, tt.err) {
 				t.Errorf(cmp.Diff(err, tt.err, cmpopts.EquateErrors()))
 			}
@@ -407,6 +410,57 @@ func TestDockerfilePinning(t *testing.T) {
 
 			if tt.warns != unpinned {
 				t.Errorf("expected %v. Got %v", tt.warns, unpinned)
+			}
+		})
+	}
+}
+
+func TestFileIsInVendorDir(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		filename string
+		expected bool
+	}{
+		{
+			name:     "not in vendor or third_party",
+			filename: "a/b/c/d/Dockerfile",
+			expected: false,
+		},
+		{
+			name:     "is third_party deep in tree",
+			filename: "a/b/third_party/Dockerfile",
+			expected: true,
+		},
+		{
+			name:     "in vendor",
+			filename: "vendor/a/b/Dockerfile",
+			expected: true,
+		},
+		{
+			name:     "in third_party",
+			filename: "third_party/b/c/Dockerfile",
+			expected: true,
+		},
+		{
+			name:     "in deep vendor",
+			filename: "a/b/c/vendor/Dockerfile",
+			expected: true,
+		},
+		{
+			name:     "misspelled vendor dir",
+			filename: "a/vendorr/Dockerfile",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := fileIsInVendorDir(tt.filename)
+			if got != tt.expected {
+				t.Errorf("expected %v. Got %v", tt.expected, got)
 			}
 		})
 	}
@@ -577,9 +631,41 @@ func TestDockerfileInvalidFiles(t *testing.T) {
 	}
 }
 
+func TestDockerfileInsecureDownloadsBrokenCommands(t *testing.T) {
+	t.Parallel()
+	//nolint:govet
+	tests := []struct {
+		name     string
+		filename string
+		err      error
+	}{
+		{
+			name:     "dockerfile downloads",
+			filename: "./testdata/Dockerfile-empty-run-array",
+			err:      errInternalInvalidDockerFile,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			content, err := os.ReadFile(tt.filename)
+			if err != nil {
+				t.Errorf("cannot read file: %v", err)
+			}
+
+			var r checker.PinningDependenciesData
+			_, err = validateDockerfileInsecureDownloads(tt.filename, content, &r)
+			if !strings.Contains(err.Error(), tt.err.Error()) {
+				t.Errorf(cmp.Diff(err, tt.err, cmpopts.EquateErrors()))
+			}
+		})
+	}
+}
+
 func TestDockerfileInsecureDownloadsLineNumber(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name             string
 		filename         string
@@ -594,7 +680,6 @@ func TestDockerfileInsecureDownloadsLineNumber(t *testing.T) {
 		{
 			name:     "dockerfile downloads",
 			filename: "./testdata/Dockerfile-download-lines",
-			//nolint
 			expected: []struct {
 				snippet   string
 				startLine uint
@@ -673,12 +758,29 @@ func TestDockerfileInsecureDownloadsLineNumber(t *testing.T) {
 					endLine:   64,
 					t:         checker.DependencyUseTypePipCommand,
 				},
+				{
+					snippet:   `bash <(curl --silent --show-error "https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash")`,
+					startLine: 68,
+					endLine:   68,
+					t:         checker.DependencyUseTypeDownloadThenRun,
+				},
+				{
+					snippet:   "curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin",
+					startLine: 69,
+					endLine:   69,
+					t:         checker.DependencyUseTypeDownloadThenRun,
+				},
+				{
+					snippet:   "curl -sSL https://raw.githubusercontent.com/dotnet/install-scripts/main/src/dotnet-install.sh | bash /dev/stdin",
+					startLine: 70,
+					endLine:   70,
+					t:         checker.DependencyUseTypeDownloadThenRun,
+				},
 			},
 		},
 		{
 			name:     "dockerfile downloads multi-run",
 			filename: "./testdata/Dockerfile-download-multi-runs",
-			//nolint
 			expected: []struct {
 				snippet   string
 				startLine uint
@@ -773,9 +875,152 @@ func TestDockerfileInsecureDownloadsLineNumber(t *testing.T) {
 	}
 }
 
+func TestDockerfileWithHeredocsInsecureDownloadsLineNumber(t *testing.T) {
+	t.Parallel()
+	//nolint:govet
+	tests := []struct {
+		name             string
+		filename         string
+		processingErrors int
+		expected         []struct {
+			snippet   string
+			startLine uint
+			endLine   uint
+			pinned    bool
+			t         checker.DependencyUseType
+		}
+	}{
+		{
+			name:             "dockerfile heredoc downloads",
+			filename:         "./testdata/Dockerfile-download-heredoc",
+			processingErrors: 1,
+			expected: []struct {
+				snippet   string
+				startLine uint
+				endLine   uint
+				pinned    bool
+				t         checker.DependencyUseType
+			}{
+				{
+					snippet:   "pip install --no-deps -e git+https://github.com/username/repo.git@v1.0#egg=package",
+					startLine: 20,
+					endLine:   20,
+					pinned:    false,
+					t:         checker.DependencyUseTypePipCommand,
+				},
+				{
+					snippet:   "pip install --no-deps -e git+https://github.com/username/repo.git@0123456789abcdef0123456789abcdef01234567",
+					startLine: 24,
+					endLine:   24,
+					pinned:    true,
+					t:         checker.DependencyUseTypePipCommand,
+				},
+				{
+					snippet:   "curl bla | bash",
+					startLine: 28,
+					endLine:   28,
+					pinned:    false,
+					t:         checker.DependencyUseTypeDownloadThenRun,
+				},
+				{
+					snippet:   "pip install --no-deps -e git+https://github.com/username/repo.git@0123456789abcdef0123456789abcdef01234567",
+					startLine: 32,
+					endLine:   32,
+					pinned:    true,
+					t:         checker.DependencyUseTypePipCommand,
+				},
+				{
+					snippet:   "pip install --no-deps -e git+https://github.com/username/repo.git@v1.0#egg=package",
+					startLine: 36,
+					endLine:   36,
+					pinned:    false,
+					t:         checker.DependencyUseTypePipCommand,
+				},
+				{
+					snippet:   "curl bla | bash",
+					startLine: 38,
+					endLine:   38,
+					pinned:    false,
+					t:         checker.DependencyUseTypeDownloadThenRun,
+				},
+				{
+					snippet:   "pip install --no-deps -e git+https://github.com/username/repo.git@0123456789abcdef0123456789abcdef01234567",
+					startLine: 42,
+					endLine:   43,
+					pinned:    true,
+					t:         checker.DependencyUseTypePipCommand,
+				},
+				{
+					snippet:   "pip install --no-deps -e git+https://github.com/username/repo.git@v1.0#egg=package",
+					startLine: 43,
+					endLine:   44,
+					pinned:    false,
+					t:         checker.DependencyUseTypePipCommand,
+				},
+				{
+					snippet:   "curl bla | bash",
+					startLine: 45,
+					endLine:   45,
+					pinned:    false,
+					t:         checker.DependencyUseTypeDownloadThenRun,
+				},
+				{
+					snippet:   "pip install --no-deps -e git+https://github.com/username/repo.git@0123456789abcdef0123456789abcdef01234567",
+					startLine: 50,
+					endLine:   52,
+					pinned:    true,
+					t:         checker.DependencyUseTypePipCommand,
+				},
+				{
+					snippet:   "curl bla | bash",
+					startLine: 51,
+					endLine:   53,
+					pinned:    false,
+					t:         checker.DependencyUseTypeDownloadThenRun,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt // Re-initializing variable so it is not changed while executing the closure below
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			content, err := os.ReadFile(tt.filename)
+			if err != nil {
+				t.Errorf("cannot read file: %v", err)
+			}
+
+			var r checker.PinningDependenciesData
+			_, err = validateDockerfileInsecureDownloads(tt.filename, content, &r)
+			if err != nil {
+				t.Errorf("error during validateDockerfileInsecureDownloads: %v", err)
+			}
+
+			for _, expectedDep := range tt.expected {
+				isExpectedDep := func(dep checker.Dependency) bool {
+					return dep.Location.Offset == expectedDep.startLine &&
+						dep.Location.EndOffset == expectedDep.endLine &&
+						dep.Location.Path == tt.filename &&
+						dep.Location.Snippet == expectedDep.snippet &&
+						*dep.Pinned == expectedDep.pinned &&
+						dep.Type == expectedDep.t
+				}
+
+				if !scut.ValidatePinningDependencies(isExpectedDep, &r) {
+					t.Errorf("test failed: dependency not present: %+v", tt.expected)
+				}
+			}
+
+			if tt.processingErrors != len(r.ProcessingErrors) {
+				t.Errorf("expected %v processing errors. Got %v", tt.processingErrors, len(r.ProcessingErrors))
+			}
+		})
+	}
+}
+
 func TestShellscriptInsecureDownloadsLineNumber(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name     string
 		filename string
@@ -789,7 +1034,6 @@ func TestShellscriptInsecureDownloadsLineNumber(t *testing.T) {
 		{
 			name:     "shell downloads",
 			filename: "./testdata/shell-download-lines.sh",
-			//nolint
 			expected: []struct {
 				snippet   string
 				startLine uint
@@ -922,6 +1166,24 @@ func TestShellscriptInsecureDownloadsLineNumber(t *testing.T) {
 					endLine:   64,
 					t:         checker.DependencyUseTypeNugetCommand,
 				},
+				{
+					snippet:   `bash <(curl --silent --show-error "https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash")`,
+					startLine: 69,
+					endLine:   69,
+					t:         checker.DependencyUseTypeDownloadThenRun,
+				},
+				{
+					snippet:   "curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin",
+					startLine: 70,
+					endLine:   70,
+					t:         checker.DependencyUseTypeDownloadThenRun,
+				},
+				{
+					snippet:   "curl -sSL https://raw.githubusercontent.com/dotnet/install-scripts/main/src/dotnet-install.sh | bash /dev/stdin",
+					startLine: 71,
+					endLine:   71,
+					t:         checker.DependencyUseTypeDownloadThenRun,
+				},
 			},
 		},
 	}
@@ -960,7 +1222,7 @@ func TestShellscriptInsecureDownloadsLineNumber(t *testing.T) {
 
 func TestDockerfilePinningWihoutHash(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		warns    int
 		err      error
@@ -1015,7 +1277,7 @@ func TestDockerfilePinningWihoutHash(t *testing.T) {
 
 func TestDockerfileScriptDownload(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		unpinned         int
 		processingErrors int
@@ -1026,7 +1288,7 @@ func TestDockerfileScriptDownload(t *testing.T) {
 		{
 			name:     "curl | sh",
 			filename: "./testdata/Dockerfile-curl-sh",
-			unpinned: 4,
+			unpinned: 5,
 		},
 		{
 			name:     "empty file",
@@ -1043,7 +1305,7 @@ func TestDockerfileScriptDownload(t *testing.T) {
 		{
 			name:     "wget | /bin/sh",
 			filename: "./testdata/Dockerfile-wget-bin-sh",
-			unpinned: 3,
+			unpinned: 4,
 		},
 		{
 			name:     "wget no exec",
@@ -1131,7 +1393,7 @@ func TestDockerfileScriptDownload(t *testing.T) {
 
 func TestDockerfileScriptDownloadInfo(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name             string
 		filename         string
@@ -1185,7 +1447,7 @@ func TestDockerfileScriptDownloadInfo(t *testing.T) {
 
 func TestShellScriptDownload(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name             string
 		filename         string
@@ -1209,7 +1471,7 @@ func TestShellScriptDownload(t *testing.T) {
 		{
 			name:     "bash script",
 			filename: "./testdata/script-bash",
-			unpinned: 7,
+			unpinned: 11,
 		},
 		{
 			name:     "sh script 2",
@@ -1268,7 +1530,7 @@ func TestShellScriptDownload(t *testing.T) {
 
 func TestShellScriptDownloadPinned(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name     string
 		filename string
@@ -1318,7 +1580,7 @@ func TestShellScriptDownloadPinned(t *testing.T) {
 
 func TestGitHubWorflowRunDownload(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name             string
 		filename         string

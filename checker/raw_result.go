@@ -25,7 +25,8 @@ import (
 
 // RawResults contains results before a policy
 // is applied.
-// nolint
+//
+//nolint:govet
 type RawResults struct {
 	BinaryArtifactResults       BinaryArtifactData
 	BranchProtectionResults     BranchProtectionsData
@@ -77,7 +78,6 @@ type PackagingData struct {
 }
 
 // Package represents a package.
-// nolint
 type Package struct {
 	// TODO: not supported yet. This needs to be unique across
 	// ecosystems: purl, OSV, CPE, etc.
@@ -257,6 +257,12 @@ const (
 	CodeQLWorkflow SASTWorkflowType = "CodeQL"
 	// SonarWorkflow represents a workflow that runs Sonar.
 	SonarWorkflow SASTWorkflowType = "Sonar"
+	// SnykWorkflow represents a workflow that runs Snyk.
+	SnykWorkflow SASTWorkflowType = "Snyk"
+	// PysaWorkflow represents a workflow that runs Pysa.
+	PysaWorkflow SASTWorkflowType = "Pysa"
+	// QodanaWorkflow represents a workflow that runs Qodana.
+	QodanaWorkflow SASTWorkflowType = "Qodana"
 )
 
 // SASTWorkflow represents a SAST workflow.

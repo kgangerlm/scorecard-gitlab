@@ -30,16 +30,15 @@ import (
 // TestFuzzing is a test function for Fuzzing.
 func TestFuzzing(t *testing.T) {
 	t.Parallel()
-	//nolint
 	tests := []struct {
 		name        string
+		fileContent string
 		langs       []clients.Language
+		fileName    []string
 		response    clients.SearchResponse
+		expected    scut.TestReturn
 		wantErr     bool
 		wantFuzzErr bool
-		fileName    []string
-		fileContent string
-		expected    scut.TestReturn
 	}{
 		{
 			name:     "empty response",
@@ -139,7 +138,6 @@ func TestFuzzing(t *testing.T) {
 			mockFuzz.EXPECT().Search(gomock.Any()).
 				DoAndReturn(func(q clients.SearchRequest) (clients.SearchResponse, error) {
 					if tt.wantErr {
-						//nolint
 						return clients.SearchResponse{}, errors.New("error")
 					}
 					return tt.response, nil
@@ -148,7 +146,6 @@ func TestFuzzing(t *testing.T) {
 			mockFuzz.EXPECT().ListFiles(gomock.Any()).Return(tt.fileName, nil).AnyTimes()
 			mockFuzz.EXPECT().GetFileContent(gomock.Any()).DoAndReturn(func(f string) (string, error) {
 				if tt.wantErr {
-					//nolint
 					return "", errors.New("error")
 				}
 				return tt.fileContent, nil
